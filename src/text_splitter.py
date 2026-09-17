@@ -1,28 +1,55 @@
-def chunk_document(documents, chunk_size = 600, chunk_overlap = 100):
+from pathlib import Path
+from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+HEADER_TO_SPLIT = [
+    ("#", "heading_1"),
+    ("##", "heading_2"),
+    ("###", "heading_3")
+]
+
+def chunk_documents(documents):
+    markdown_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=HEADER_TO_SPLIT,
+        strip_headers=False
+    )
+    
     chunks = []
-    for doc in documents:
-        text = doc["text"]
-        start = 0
-        chunk_index = 0
-
-        while start < len(text):
-            end = start + chunk_size
-            if end < len(text):
-                while end > start and text[end] != ' ':
-                    end -= 1
-
-            split_text = text[start:end].strip()
-
-            if split_text:
-                chunk = {
-                    "text": split_text,
-                    "metadata": doc["metadata"].copy
-                }
-                chunk["metadata"]["chunk_id"] = f"{doc['metadata']['game'].replace(' ', '')}_p{doc['metadata']['page']}_c{chunk_index}"
-                chunks.append(chunk)
-
-        start = end - chunk_overlap
-        chunk_index += 1
-
+    for document in documents:
+        document_chunks = markdown_splitter.split_text(document.page_content)
+    
+        for chunk in document_chunks:
+            chunk.metadata = {**document.metadata, **chunk.metadata}
+            
+            chunks.append(chunk)
+    
+    for index, chunk in enumerate(chunks):
+        source = chunk.metadata.get("source", "unknown")
+        filename = Path(source).stem
+        
+        chunk.metadata["chunk_id"] = (f"{filename}_chunk_{index}")
+    
+    
     return chunks
+
+if __name__ == "__main__":
+    from document_loader import load_markdown_documents
+
+    documents = load_markdown_documents()
+    chunks = chunk_documents(documents)
+
+    print(f"Total documents: {len(documents)}")
+    print(f"Total chunks: {len(chunks)}")
+
+    for index, chunk in enumerate(chunks):
+        print("=" * 70)
+        print(f"CHUNK {index + 1}")
+        print("=" * 70)
+
+        print("Metadata:")
+        print(chunk.metadata)
+
+        print("\nContent:")
+        print(chunk.page_content)
+
+        print(f"\nChunk length: {len(chunk.page_content)}")
 

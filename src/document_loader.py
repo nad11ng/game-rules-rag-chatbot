@@ -33,11 +33,11 @@ if __name__ == "__main__":
     for document in documents:
         print("=" * 70)
         print(f"DOCUMENT: {document}")
-        print("=" * 70)
+        print("-" * 70)
 
         print("\nMetadata:")
         print(document.metadata)
-        print("=" * 70)
+        print("-" * 70)
         
         print("\nContent:")
         print(document.metadata)

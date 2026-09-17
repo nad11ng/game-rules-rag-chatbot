@@ -12,3 +12,6 @@ storage/
 
 # macOS
 .DS_Store
+
+# ChromaDB storage
+storage/chroma/

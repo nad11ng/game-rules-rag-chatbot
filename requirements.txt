@@ -1,6 +1,7 @@
 streamlit
 chromadb
-pymupdf
 openai
 python-dotenv
 pytest
+langchain.community
+tqdm

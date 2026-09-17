@@ -66,6 +66,41 @@ def load_documents(directory=DEFAULT_DATA_DIRECTORY):
 
     return all_documents
 
+
+def chunk_document(documents, chunk_size = 600, chunk_overlap = 100):
+    chunks = []
+    for doc in documents:
+        text = doc["text"]
+        start = 0
+        chunk_index = 0
+
+        while start < len(text):
+            end = min(start + chunk_size, len(text))
+            if end < len(text):
+                split_at = end
+                while split_at > start and text[split_at] != ' ':
+                    split_at -= 1
+                if split_at > start:
+                    end = split_at
+
+            split_text = text[start:end].strip()
+
+            if split_text:
+                chunk = {
+                    "text": split_text,
+                    "metadata": doc["metadata"].copy()
+                }
+                chunk["metadata"]["chunk_id"] = f"{doc['metadata']['source'].replace(' ', '')}_p{doc['metadata']['page']}_c{chunk_index}"
+                chunks.append(chunk)
+                chunk_index += 1
+
+            if end >= len(text):
+                break
+
+            start = max(end - chunk_overlap, start + 1)
+
+    return chunks
+
 def main():
     """
     Test the document loader.
@@ -86,6 +121,7 @@ def main():
         print("First 300 characters:")
         print(first_document["text"][:300])
 
+        print(chunk_document(documents, chunk_size = 600, chunk_overlap= 100))
 
 if __name__ == "__main__":
     main()

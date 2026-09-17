@@ -26,4 +26,3 @@ def chunk_document(documents, chunk_size = 600, chunk_overlap = 100):
 
     return chunks
 
-

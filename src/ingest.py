@@ -3,7 +3,7 @@ from pathlib import Path
 import chromadb
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
-from document_loader import load_markdown_documents
+from document_loader import load_markdown_documents, load_pdf_documents
 from text_splitter import chunk_documents
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -13,7 +13,8 @@ COLLECTION_NAME = "game_rules"
 
 def ingest_documents():
     # Load markdown documents
-    documents = load_markdown_documents()
+    # documents = load_markdown_documents()
+    documents = load_pdf_documents()
     
     # Split documents into chunks
     chunks = chunk_documents(documents)

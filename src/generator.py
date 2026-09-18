@@ -25,7 +25,8 @@ def generate_answer(question: str, context: str, model_name: str = "llama3") -> 
         "2. If the context does not contain the answer, explicitly state that the answer could not be found in the provided rule documents.\n"
         "3. Always mention which game or section the rule belongs to if specified in the context.\n"
         "4. Respond in the same language as the user's question (e.g., if asked in Vietnamese, reply in Vietnamese).\n"
-        "5. Be concise, clear, and direct."
+        "5. Be concise, clear, and direct.\n"
+        "6. Always answer with this format 'Answer:{response}. [Game:{game_name}, Section:{section}]"
     )
     user_prompt = f"Context:\n{context}\n\nQuestion:\n{question}"
 

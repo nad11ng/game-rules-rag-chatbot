@@ -40,8 +40,8 @@ def search_rules(query: str, game_filter: str = None, n_results: int = 3) -> lis
 
             # extract game name and rule from metadata
             for doc, meta in zip(documents,metadatas):
-                game_name = meta.get("game", "unknown game")
-                section_name = meta.get("section", "General")
+                game_name = meta.get("heading_1", "unknown game")
+                section_name = meta.get("heading_2", "General")
 
                 # format text for LLM
                 source_info = f"[Game: {game_name} | Section: {section_name}]"

@@ -1,9 +1,24 @@
 from pathlib import Path
 
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
+from langchain_community.document_loaders import DirectoryLoader, TextLoader, PyMuPDFLoader
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_DIRECTORY = PROJECT_ROOT / "data" / "raw"
+
+def load_pdf_documents(directory=DEFAULT_DATA_DIRECTORY):
+    directory = Path(directory)
+    
+    loader = DirectoryLoader(
+        path=str(directory),
+        gold="**/*.pdf",
+        loader_cls=PyMuPDFLoader,
+        show_progress=True,
+        use_multithreading=False
+    )
+    
+    documents = loader.load()
+    
+    return documents
 
 def load_markdown_documents(directory=DEFAULT_DATA_DIRECTORY):
     

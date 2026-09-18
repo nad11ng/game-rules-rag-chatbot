@@ -1,25 +1,23 @@
 import os
 import chromadb
 from chromadb.utils import embedding_functions
+from pathlib import Path
 
-def search_rules(query: str, game_filter: str = None, n_results: int = 3 ) -> list:
-    persist_directory = "storage/chroma"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CHROMA_DIRECTORY = PROJECT_ROOT / "storage" / "chroma"
+COLLECTION_NAME = "game_rules"
 
-    # test if database exists.
-    if not os.path.exists(persist_directory):
-        print("Database not found at '{persist_directory}', run ingest.py first.")
+def search_rules(query: str, game_filter: str = None, n_results: int = 3) -> list:
+    if not CHROMA_DIRECTORY.exists():
+        print(f"Database not found at '{CHROMA_DIRECTORY}', run ingest.py first.")
         return []
 
     try:
-        # connect local database Chroma
-        client = chromadb.PersistentClient(path=persist_directory)
-
-        # use Chroma's default embedding model
+        client = chromadb.PersistentClient(path=str(CHROMA_DIRECTORY))
         embedding_fn = embedding_functions.DefaultEmbeddingFunction()
 
-        # get rules collection
         collection = client.get_collection(
-            name="game_rules",
+            name=COLLECTION_NAME,
             embedding_function=embedding_fn
         )
 
@@ -58,13 +56,12 @@ def search_rules(query: str, game_filter: str = None, n_results: int = 3 ) -> li
 
 
 if __name__ == "__main__":
-    print("Đang kiểm tra bộ truy xuất Retriever...")
-    test_query = "Làm sao để chiến thắng?"
+    print("Testing Retriever...")
+    test_query = "How to win?"
     
-    # Lưu ý: Lúc này nếu chưa có database, code sẽ in ra dòng Cảnh báo và trả về list rỗng
     results = search_rules(test_query)
     
-    print(f"\nTìm thấy {len(results)} kết quả cho câu hỏi: '{test_query}'")
+    print(f"\nFound {len(results)} for query: '{test_query}'")
     for i, res in enumerate(results, 1):
-        print(f"\n--- Kết quả {i} ---")
+        print(f"\n--- Result {i} ---")
         print(res)

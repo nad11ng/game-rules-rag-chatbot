@@ -36,16 +36,22 @@ def ingest_documents():
     chunk_texts = []
     chunk_metadatas = []
     chunk_ids = []
+    # chunk_game_name = []
+    # chunk_section = []
     
     for chunk in chunks:
         chunk_texts.append(chunk.page_content)
         chunk_metadatas.append(chunk.metadata)
         chunk_ids.append(chunk.metadata["chunk_id"])
+        # chunk_game_name.append(chunk.metadata["heading_1"])
+        # chunk_section.append(chunk.metadata["heading_2"])
         
     collection.upsert(
         ids=chunk_ids,
         documents=chunk_texts,
-        metadatas=chunk_metadatas
+        metadatas=chunk_metadatas,
+        # game_name=chunk_game_name,
+        # section_name=chunk_section
     )
     
     return documents, chunks, collection

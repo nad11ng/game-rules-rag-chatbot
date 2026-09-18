@@ -1,4 +1,4 @@
-# Battleship: Complete Game Rules and Strategies
+# Battleship
 
 ## 1. Components and Standard Fleet
 - **Objective**: Sink the entire opposing fleet before yours is destroyed.

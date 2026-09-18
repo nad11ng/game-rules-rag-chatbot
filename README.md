@@ -1,105 +1,165 @@
-# GameRules Library RAG Chatbot
+# Board Game Rules RAG Chatbot
+
+A Retrieval-Augmented Generation (RAG) chatbot that answers questions about board game rules using only the provided rule documents as context, so it does not hallucinate rules that aren't in the source material.
 
 ## 1. Project overview
-Build a chatbot that can answer questions about the rules of five games based entirely on provided documents.
+
 Core features:
-* Identify the correct game being asked about.
-* Find the correct document segment and answer based on the retrieved context.
-* Display sources.
-* Do not invent rules when the document does not mention them.
-* Support questions in Vietnamese and English.
+* Load board game rule documents (Markdown) and split them into structured chunks.
+* Embed and store chunks in a local vector database (ChromaDB).
+* Retrieve the most relevant rule chunks for a user's question.
+* Generate an answer using an LLM, grounded strictly in the retrieved context.
+* Simple CLI chat interface for testing the full pipeline end to end.
 
-## 2. Demo
-*(Add screenshot or GIF demo here)*
-![Demo](assets/demo.gif) 
+## 2. Current supported games
 
-## 3. Supported games
-The project supports explaining the rules of 5 games:
-* Battleship
-* Tic-tac-toe
-* UNO
-* Pac-Man (Rules and gameplay mechanics of the classic arcade version)
-* Connect Four
+Based on the documents currently ingested from `data/raw/`:
+* Battleship (`battleship.md`)
+* UNO (`uno.md`)
 
-## 4. RAG Architecture
-The system consists of two separate processes:
-* **Ingestion:** Read game rule documents, clean, divide into chunks, create embeddings, and save to ChromaDB.
-* **Question answering:** Receive user question, identify the game, search for relevant chunks in ChromaDB, combine into Prompt (question + context), and pass to LLM to generate an answer with sources.
+> Only `.md` files are picked up by the ingestion pipeline. `battleship.pdf` and `uno.pdf` are kept in `data/raw/` for reference but are **not** read by `document_loader.py` (it only globs `**/*.md`).
 
-## 5. Technologies used
-* **Language:** Python
-* **Interface:** Streamlit
-* **Document reading:** PyMuPDF
-* **Embedding:** OpenAI Embeddings or Sentence Transformers
-* **Vector database:** ChromaDB
-* **LLM:** OpenAI API or Ollama (currently configured for a custom LLM endpoint via Kaggle/Docker setup)
-* **Environment & Source code management:** Git, GitHub, and python-dotenv
-* **Testing:** pytest
+## 3. Tech stack
 
-## 6. Installation guide
-If running locally without Docker:
+| Layer | Technology |
+|---|---|
+| Language | Python 3 |
+| Document loading | LangChain (`langchain-community`) `DirectoryLoader` + `TextLoader` |
+| Chunking | LangChain `MarkdownHeaderTextSplitter` (splits on `#`, `##`, `###`) |
+| Embeddings | ChromaDB's built-in `DefaultEmbeddingFunction` (ONNX `all-MiniLM-L6-v2`, downloaded automatically on first run) |
+| Vector database | ChromaDB (`PersistentClient`, stored locally in `storage/chroma/`) |
+| LLM serving | Ollama running on a Kaggle notebook (GPU), exposed publicly via a local tunnel |
+| LLM client | `openai` Python SDK configured with a custom `base_url` (OpenAI-compatible endpoint) |
+| CLI | Plain Python (`src/main.py`) |
+| Web UI (planned) | Streamlit (`app.py` — not implemented yet) |
+| Config | `python-dotenv` (`.env`) |
+| Containerization | Docker / docker-compose (targets the Streamlit app) |
+| Testing | pytest |
+
+## 4. Project structure
+
+```
+src/
+  document_loader.py   # Loads *.md files from data/raw/
+  text_splitter.py      # Splits documents into chunks by Markdown headers
+  ingest.py              # Orchestrates load -> chunk -> embed -> store in ChromaDB
+  retriever.py           # Queries ChromaDB and returns formatted context chunks
+  generator.py           # Calls the LLM (Ollama via OpenAI-compatible API) to generate the final answer
+  main.py                 # CLI chat loop tying retriever + generator together
+data/raw/                # Source rule documents (.md used, .pdf kept for reference)
+storage/chroma/          # Local persistent vector database (auto-created by ingest.py)
+app.py                    # Streamlit entry point (currently empty, not implemented)
+requirements.txt
+.env                       # LLM_API_URL and other environment config
+```
+
+## 5. Prerequisites
+
+* Python 3.11+ (project has been run successfully on 3.12/3.13)
+* Windows users on **ARM64** machines: use an **x64 (amd64) Python interpreter**, not an ARM64 one. `pyarrow` (a ChromaDB dependency) has no prebuilt wheel for Windows ARM64 and will fail to build from source. An x64 interpreter runs fine under emulation and has full wheel support.
+* A Kaggle account (for running the LLM with free GPU access)
+
+## 6. Installation
+
 ```bash
 git clone <repository-url>
 cd game-rules-rag-chatbot
 python -m venv .venv
-.venv\Scripts\activate  # Or `source .venv/bin/activate` on Linux/Mac
+.venv\Scripts\activate        # On Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 7. Environment setup (.env)
-Copy the example file to create the environment configuration:
-```bash
-copy .env.example .env  # Use `cp` on Linux/Mac
-```
-*Note: Add the `LLM_API_URL` from your Kaggle server to the `.env` file.*
+## 7. Setting up the LLM server (Ollama on Kaggle + tunnel)
 
-## 8. Document ingestion
-Before asking questions, you need to prepare the data and vector db (run only once):
-```bash
-python -m src.ingest
+The chatbot does not call OpenAI — it calls a **local Ollama server running inside a Kaggle notebook**, exposed to the internet through a tunnel. This step is required before the chatbot can generate answers (retrieval still works without it).
+
+1. Open a Kaggle notebook with GPU enabled.
+2. Install and start Ollama inside the notebook, then pull the model you intend to use (e.g. `llama3`).
+3. Start the Ollama server so it listens locally inside the Kaggle kernel (default port `11434`).
+4. Expose that local port publicly using a tunnel tool (e.g. `localtunnel`) run from inside the Kaggle notebook. This gives you a public forwarding URL, for example:
+   ```
+   https://gold-hoops-sit.loca.lt
+   ```
+5. Copy that URL into your `.env` file as `LLM_API_URL`, and make sure to **append `/v1`** at the end, since `generator.py` talks to Ollama's OpenAI-compatible API:
+   ```
+   LLM_API_URL=https://gold-hoops-sit.loca.lt/v1
+   ```
+6. Every time you restart the Kaggle notebook/tunnel, the URL changes — update `.env` again with the new URL before testing.
+7. Once `.env` is updated, run `main.py` from inside `src/` (see step 9 below) to confirm the connection works end to end.
+
+> If `LLM_API_URL` is not set, `generator.py` falls back to `http://localhost:11434/v1`, i.e. an Ollama instance running on your own machine.
+
+## 8. Environment setup (`.env`)
+
+Create/edit `.env` in the project root:
+```
+LLM_API_URL=https://<your-tunnel-url>/v1
 ```
 
-## 9. Running the CLI
-Test the RAG logic without the UI:
-```bash
-python -m src.cli
-```
+## 9. Running the pipeline
 
-## 10. Running Streamlit
-To start the chatbot web interface:
-```bash
-streamlit run app.py
-```
-*(If using Docker: Run `docker-compose up --build`)*
+All scripts currently use direct (non-package) imports, so they must be run **from inside the `src/` folder**, not with `python -m`.
 
-## 11. Example questions
-You can try the following questions:
+### 9.1 Ingest the documents (run once, or whenever `data/raw/*.md` changes)
+```bash
+cd src
+python ingest.py
+```
+This loads the Markdown files, splits them into chunks, generates embeddings, and stores everything in `storage/chroma/` under the collection `game_rules`.
+
+### 9.2 Test retrieval only (optional, no LLM needed)
+```bash
+python retriever.py
+```
+Runs a sample query against the local vector database and prints the matched chunks.
+
+### 9.3 Test generation only (optional, requires `LLM_API_URL` to be reachable)
+```bash
+python generator.py
+```
+Sends a sample context + question to the configured LLM endpoint and prints the answer.
+
+### 9.4 Run the full chatbot (CLI)
+```bash
+python main.py
+```
+Then type a question, e.g.:
+```
+You: How to win in Battleship?
+```
+Type `exit` or `quit` to end the conversation.
+
+> `app.py` (Streamlit web UI) is not implemented yet — use `main.py` for now.
+
+## 10. Example questions
+
 * "How many ships does each Battleship player have?"
-* "In Tic-tac-toe, when is the game a tie?"
-* "Can a Wild Draw Four be played at any time?"
-* "What is the effect of the Power Pellet in Pac-Man?"
-* "In Connect Four, can a checker be placed in any slot?"
-* "How do UNO and Battleship differ in the number of players?"
+* "Can a Wild Draw Four be played at any time in UNO?"
+* "How to win in Battleship?"
 
-## 12. Evaluation results
-The system uses a set of 50 test questions (stored in `evaluation/questions.json`) to evaluate: direct questions, rephrased questions, comparison questions, unanswerable questions, and wrong-game questions.
-Evaluates Retrieval and Answer accuracy (e.g., source accuracy, refusal on missing data).
+## 11. Troubleshooting
 
-## 13. Current limitations
-The current version does not support:
-* User login and account database.
-* Voice chatbot.
-* Fine-tuning.
-* Stable cloud deployment (currently using Kaggle session/Local).
-* Real-time Internet search.
+* **`ModuleNotFoundError` when running a script** — make sure you `cd src` first; these scripts rely on the current working directory being `src/` for their imports to resolve.
+* **`Database not found` from `retriever.py`/`main.py`** — run `python ingest.py` first to create `storage/chroma/`.
+* **`Error: No connection to LLM server`** — your Kaggle notebook/tunnel is not running, or `LLM_API_URL` in `.env` is stale/missing the `/v1` suffix.
+* **`pyarrow` fails to install on Windows ARM64** — see the Prerequisites section; switch to an x64 Python interpreter.
 
-## 14. Roadmap
-* **Version 0.2:** Hybrid search (keyword + vector), adjust chunk size, reranking, automatic game identification, cross-game rule comparison.
-* **Version 0.3:** Docker deployment, Automated tests on GitHub Actions, deploy demo, evaluation dashboard, support uploading new documents.
+## 12. Current limitations
 
-## 15. Document sources
-All rule documents are stored in `data/raw/` including: `battleship_rules.pdf`, `tic_tac_toe_rules.pdf`, `uno_rules.pdf`, `pacman_rules.pdf`, `connect_four_rules.pdf`.
-*(Note: UNO uses official rules, not house rules).*
+* Only 2 games ingested so far (Battleship, UNO); PDFs are not parsed yet.
+* No Streamlit web UI yet (`app.py` is empty).
+* No automatic game detection/filtering wired into the CLI (`game_filter` exists in `retriever.py` but is unused by `main.py`).
+* Depends on a Kaggle notebook + tunnel staying online; the LLM endpoint is not persistent.
+* No automated tests yet (`tests/` is an empty package).
 
-## 16. License
+## 13. Roadmap
+
+* Wire up `game_filter` in the CLI for per-game filtering.
+* Implement the Streamlit UI (`app.py`).
+* Add more games and parse the existing PDFs.
+* Add automated tests and CI.
+* Move to a more stable LLM hosting setup (replace the Kaggle tunnel).
+
+## 14. License
+
 MIT License

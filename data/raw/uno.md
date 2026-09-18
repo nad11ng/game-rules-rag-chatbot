@@ -1,4 +1,4 @@
-# UNO: Complete Game Rules and Strategies
+# UNO
 
 ## 1. Objective and Components
 - **Objective**: Be the first player to play all cards in your hand in each round, scoring points based on cards left in opponents' hands[cite: 4]. The first player to reach 500 points wins[cite: 4].

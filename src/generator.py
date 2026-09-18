@@ -46,9 +46,10 @@ def generate_answer(question: str, context: str, model_name: str = "llama3") -> 
 #test
 if __name__ == "__main__":
     print("Đang kiểm tra generator với dữ liệu mẫu...")
-    sample_context = "[Game: Battleship, Section: Components]\nEach player has 5 ships: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (2)."
-    sample_question = "Mỗi người chơi Battleship có bao nhiêu tàu?"
     
+    sample_context = "[Game: Battleship, Section: Components]\nEach player has 5 ships: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (2)."
+    sample_question = "How many ships does a player has?"
+    print("Câu hỏi: " + sample_question)
     result = generate_answer(sample_question, sample_context)
     print("\n--- KẾT QUẢ TEST ---")
     print(result)

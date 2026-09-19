@@ -7,28 +7,6 @@ HEADER_TO_SPLIT = [
     ("###", "heading_3")
 ]
 
-def chunk_pdf(documents):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        separators=["\\n\\n", "\\n", ". ", " ", ""]
-    )
-    chunks = []
-    for document in documents:
-        document_chunks = text_splitter.split_text(document.page_tent)
-        
-        for chunk in document_chunks:
-            chunk.metadata = {**document.metadata, **chunk.metadata}
-            
-            chunks.append(chunk)
-
-    for index, chunk in enumerate(chunks):
-        source = chunk.metada.get("source", "unknown")
-        filename = Path(source).stem
-        
-        chunk.metadata["chunk_id"] = (f"{filename}_chunk_{index}")
-        
-    return chunks
 
 
 def chunk_documents(documents):

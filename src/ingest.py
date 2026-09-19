@@ -13,8 +13,7 @@ COLLECTION_NAME = "game_rules"
 
 def ingest_documents():
     # Load markdown documents
-    # documents = load_markdown_documents()
-    documents = load_pdf_documents()
+    documents = load_markdown_documents()
     
     # Split documents into chunks
     chunks = chunk_documents(documents)
